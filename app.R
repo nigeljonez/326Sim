@@ -8,21 +8,19 @@
 #
 
 library(shiny)
-library(s20x)
 
-arterms = factor()
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
    
    # Application title
-   titlePanel("Old Faithful Geyser Data"),
+   titlePanel("326 ARIMA Simulator"),
    
    # Sidebar with a slider input for number of bins 
    sidebarLayout(
       sidebarPanel(
          sliderInput(paste("ar1val"),paste("AR1"), min = 0, max = 1.0, value = 0.5),
-         sliderInput(paste("ar2val"),paste("AR2"), min = 0, max = 1.0, value = 0.1),
+         sliderInput(paste("ar2val"),paste("AR2"), min = 0, max = 1.0, value = 0),
          sliderInput(paste("ar3val"),paste("AR3"), min = 0, max = 1.0, value = 0),
          sliderInput(paste("ar4val"),paste("AR4"), min = 0, max = 1.0, value = 0),
          sliderInput(paste("ma1val"),paste("MA1"), min = 0, max = 1.0, value = 0),
@@ -33,9 +31,17 @@ ui <- fluidPage(
       
       # Show a plot of the generated distribution
       mainPanel(
-        plotOutput("tsPlot"),
-        plotOutput("acfPlot"),
-        plotOutput("pacfPlot")
+        textOutput("arWarning"),
+        tabsetPanel(
+          tabPanel("Plots",
+                    plotOutput("arimaplots", height="750px")
+                   ),
+          tabPanel("ARIMA",
+                   sliderInput("arimaar", "# of ARs", min = 0, max = 4, value = 1),
+                   sliderInput("arimama", "# of MAs", min = 0, max = 4, value = 0),
+                   verbatimTextOutput("arimacmd")
+                   )
+        )
       )
    )
 )
@@ -43,19 +49,13 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   arsim <- reactive({
+    if ((input$ar1val + input$ar2val + input$ar3val + input$ar4val) < 1) {
       arima.sim(model = list(
         ar = sapply(1:4, function(i) { input[[paste0("ar", i, "val")]]}),
         ma = sapply(1:4, function(i) { input[[paste0("ma", i, "val")]]})
-        #ar = c(input$ar1val, input$ar2val)
-        #ar = c(input$ar1val)
-        #ar = if(input$arterms > 0) { sapply(1:input$arterms, function(i) { input$ar1val } ) } else { c(0) },
-        #ma = if(input$materms > 0) { sapply(1:input$materms, function(i) { input$ma1val } ) } else { c(0) }
       ),
       n = 1000)
-    #arima.sim(model = list(ar = c(input$ar1val, input$ar2val, input$ar3val, input$ar4val),
-    #                       ma = c(input$ma1val, input$ma2val, input$ma3val, input$ma4val)),
-    #          n = 1000)
-    #arima.sim(model = list(ar = c(input$ar1val)), n = 1000)
+    } else {return()}
   })
   
   output$arcomps <- renderUI({
@@ -80,6 +80,29 @@ server <- function(input, output) {
    })
    output$pacfPlot <- renderPlot({
      pacf(arsim())
+   })
+   
+   output$arWarning <- renderText({
+     if ((input$ar1val + input$ar2val + input$ar3val + input$ar4val) >= 1) {
+       "AR terms MUST sum to less than 1 - non stationary otherwise."
+     } else {
+       ""
+     }
+   })
+   
+   output$arimaplots <- renderPlot({
+     if (length(arsim()) == 1000) {
+       par(mfrow=c(3,1))
+       plot.ts(arsim(), main="ARIMA Sim")
+       acf(arsim())
+       pacf(arsim())
+     }
+   })
+   
+   output$arimacmd <- renderPrint({
+     if (length(arsim()) == 1000) {
+      arima(arsim(), order=c(input$arimaar, 0, input$arimama))
+     }
    })
 }
 
