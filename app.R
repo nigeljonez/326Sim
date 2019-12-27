@@ -8,10 +8,14 @@
 #
 
 library(shiny)
+library(shinyjs)
 
+
+opts <- seq(0.05, 0.9, by = 0.05)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+  useShinyjs(),
    
    # Application title
    titlePanel("326 ARIMA Simulator"),
@@ -19,14 +23,24 @@ ui <- fluidPage(
    # Sidebar with a slider input for number of bins 
    sidebarLayout(
       sidebarPanel(
-         sliderInput(paste("ar1val"),paste("AR1"), min = 0, max = 1.0, value = 0.5),
-         sliderInput(paste("ar2val"),paste("AR2"), min = 0, max = 1.0, value = 0),
-         sliderInput(paste("ar3val"),paste("AR3"), min = 0, max = 1.0, value = 0),
-         sliderInput(paste("ar4val"),paste("AR4"), min = 0, max = 1.0, value = 0),
-         sliderInput(paste("ma1val"),paste("MA1"), min = 0, max = 1.0, value = 0),
-         sliderInput(paste("ma2val"),paste("MA2"), min = 0, max = 1.0, value = 0),
-         sliderInput(paste("ma3val"),paste("MA3"), min = 0, max = 1.0, value = 0),
-         sliderInput(paste("ma4val"),paste("MA4"), min = 0, max = 1.0, value = 0)
+        inputPanel(
+          radioButtons("artype", "Type:", c("AR", "MA", "ARMA"), "AR", inline = TRUE)
+        ),
+        conditionalPanel(
+          condition = "input.artype == 'AR' || input.artype == 'ARMA'",
+          "AR Terms",
+         sliderInput("ar1val",paste("AR1"), min = 0, max = 0.9, value = 0.5, step = 0.05),
+         sliderInput("ar2val",paste("AR2"), min = 0, max = 0.45, value = 0, step = 0.025),
+         sliderInput("ar3val",paste("AR3"), min = 0, max = 0.45, value = 0, step = 0.025),
+         sliderInput("ar4val",paste("AR4"), min = 0, max = 0.45, value = 0, step = 0.025)
+        ),
+        conditionalPanel(
+          condition = "input.artype == 'MA' || input.artype == 'ARMA'",
+          "MA Terms",
+         sliderInput(paste("ma1val"),paste("MA1"), min = 0, max = 0.9, value = 0, step = 0.05),
+         sliderInput(paste("ma2val"),paste("MA2"), min = 0, max = 0.45, value = 0, step = 0.025),
+         sliderInput(paste("ma3val"),paste("MA3"), min = 0, max = 0.45, value = 0, step = 0.025)
+        )
       ),
       
       # Show a plot of the generated distribution
@@ -38,7 +52,7 @@ ui <- fluidPage(
                    ),
           tabPanel("ARIMA",
                    sliderInput("arimaar", "# of ARs", min = 0, max = 4, value = 1),
-                   sliderInput("arimama", "# of MAs", min = 0, max = 4, value = 0),
+                   sliderInput("arimama", "# of MAs", min = 0, max = 3, value = 0),
                    verbatimTextOutput("arimacmd")
                    )
         )
@@ -47,31 +61,42 @@ ui <- fluidPage(
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
+  values <- reactiveValues(arimawarning = FALSE)
+  observe({
+    setSliderU <- function(inputname, inputtype, inputnum) {
+      res <- logical(length(opts))
+      terms = (-1)*sapply(1:(inputnum-1), function(i) { input[[paste0(inputtype, i, "val")]]})
+      for (i in 1:length(opts))
+        res[i] <- all(Mod(polyroot(c(1, terms, -opts[i]))) > 1)
+      if (all(res == TRUE)) {
+        updateSliderInput(session, inputname, max = 0.9)
+        return(TRUE)
+      } else if (all(res == FALSE)) {
+        updateSliderInput(session, inputname, value = 0)
+        return(FALSE)
+      } else {
+        updateSliderInput(session, inputname, max = opts[which.min(res)-1])
+        return(TRUE)
+      }
+    }
+    shinyjs::toggleState("ar2val", (input$ar1val != 0) && setSliderU("ar2val", "ar", 2))
+    shinyjs::toggleState("ar3val", (input$ar2val != 0) && setSliderU("ar3val", "ar", 3))
+    shinyjs::toggleState("ar4val", (input$ar3val != 0) && setSliderU("ar4val", "ar", 4))
+    shinyjs::toggleState("ma2val", (input$ma1val != 0) && setSliderU("ma2val", "ma", 2))
+    shinyjs::toggleState("ma3val", (input$ma2val != 0) && setSliderU("ma3val", "ma", 3))
+  })
+  
   arsim <- reactive({
     if ((input$ar1val + input$ar2val + input$ar3val + input$ar4val) < 1) {
       arima.sim(model = list(
         ar = sapply(1:4, function(i) { input[[paste0("ar", i, "val")]]}),
-        ma = sapply(1:4, function(i) { input[[paste0("ma", i, "val")]]})
+        ma = sapply(1:3, function(i) { input[[paste0("ma", i, "val")]]})
       ),
       n = 1000)
     } else {return()}
   })
   
-  output$arcomps <- renderUI({
-    if(input$arterms > 0) {
-      lapply(1:input$arterms, function(i) {
-        sliderInput(paste("ar", i, "val"),paste("AR", i), min = 0, max = 1.0, value = 0.5)
-      })
-    }
-  })
-  output$macomps <- renderUI({
-    if(input$materms > 0) {
-      lapply(1:input$arterms, function(i) {
-        sliderInput(paste("ma", i, "val"),paste("MA", i), min = 0, max = 1.0, value = 0.5)
-      })
-    }
-  })
    output$tsPlot <- renderPlot({
       plot.ts(arsim(), main=paste("ARIMA Sim"))
    })
