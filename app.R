@@ -54,7 +54,14 @@ ui <- fluidPage(
                    sliderInput("arimaar", "# of ARs", min = 0, max = 4, value = 1),
                    sliderInput("arimama", "# of MAs", min = 0, max = 3, value = 0),
                    verbatimTextOutput("arimacmd")
-                   )
+                   ),
+          tabPanel("About",
+            div('Created with',
+                a(href='https://shiny.rstudio.com/', 'Shiny'),
+                'by Nigel Jones,', 
+                a(href='https://github.com/nigeljonez/326Sim', 
+                  'Open Source on GitHub'),
+                'under the MIT License'))
         )
       )
    )
