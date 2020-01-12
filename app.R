@@ -11,7 +11,7 @@ library(shiny)
 library(shinyjs)
 
 
-opts <- seq(0.05, 0.9, by = 0.05)
+opts <- seq(-0.9, 0.9, by = 0.05)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -29,7 +29,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.artype == 'AR' || input.artype == 'ARMA'",
           "AR Terms",
-         sliderInput("ar1val",paste("AR1"), min = 0, max = 0.9, value = 0.5, step = 0.05),
+         sliderInput("ar1val",paste("AR1"), min = -0.9, max = 0.9, value = 0.5, step = 0.05),
          sliderInput("ar2val",paste("AR2"), min = 0, max = 0.45, value = 0, step = 0.025),
          sliderInput("ar3val",paste("AR3"), min = 0, max = 0.45, value = 0, step = 0.025),
          sliderInput("ar4val",paste("AR4"), min = 0, max = 0.45, value = 0, step = 0.025)
@@ -37,7 +37,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.artype == 'MA' || input.artype == 'ARMA'",
           "MA Terms",
-         sliderInput(paste("ma1val"),paste("MA1"), min = 0, max = 0.9, value = 0, step = 0.05),
+         sliderInput(paste("ma1val"),paste("MA1"), min = -0.9, max = 0.9, value = 0, step = 0.05),
          sliderInput(paste("ma2val"),paste("MA2"), min = 0, max = 0.45, value = 0, step = 0.025),
          sliderInput(paste("ma3val"),paste("MA3"), min = 0, max = 0.45, value = 0, step = 0.025)
         )
@@ -70,13 +70,13 @@ server <- function(input, output, session) {
       for (i in 1:length(opts))
         res[i] <- all(Mod(polyroot(c(1, terms, -opts[i]))) > 1)
       if (all(res == TRUE)) {
-        updateSliderInput(session, inputname, max = 0.9)
+        updateSliderInput(session, inputname, min = -0.9, max = 0.9)
         return(TRUE)
       } else if (all(res == FALSE)) {
         updateSliderInput(session, inputname, value = 0)
         return(FALSE)
       } else {
-        updateSliderInput(session, inputname, max = opts[which.min(res)-1])
+        updateSliderInput(session, inputname, min = min(opts[res]), max = max(opts[res]))
         return(TRUE)
       }
     }
