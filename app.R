@@ -1,11 +1,8 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+# Shiny application for AR/MA/ARIMA generation
+# MIT License - see LICENSE and About tab of running app
+# for details
+
+# Also contains a small amount of bootstrap CSS (also MIT)
 
 library(shiny)
 library(shinyjs)
@@ -40,7 +37,8 @@ ui <- fluidPage(
          sliderInput(paste("ma1val"),paste("MA1"), min = -0.9, max = 0.9, value = 0, step = 0.05),
          sliderInput(paste("ma2val"),paste("MA2"), min = 0, max = 0.45, value = 0, step = 0.025),
          sliderInput(paste("ma3val"),paste("MA3"), min = 0, max = 0.45, value = 0, step = 0.025)
-        )
+        ),
+        actionButton("regenerate", "Re-generate!", icon = icon("sync"), style="color: #fff; background-color: #28a745; border-color: #28a745;")
       ),
       
       # Show a plot of the generated distribution
@@ -95,6 +93,7 @@ server <- function(input, output, session) {
   })
   
   arsim <- reactive({
+    input$regenerate
     if ((input$ar1val + input$ar2val + input$ar3val + input$ar4val) < 1) {
       arima.sim(model = list(
         ar = sapply(1:4, function(i) { input[[paste0("ar", i, "val")]]}),
