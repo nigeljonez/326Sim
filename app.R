@@ -18,7 +18,7 @@ ui <- fluidPage(
    titlePanel("326 ARIMA Simulator"),
    
    # Sidebar with a slider input for number of bins 
-   sidebarLayout(
+   sidebarLayout(div(id = "arimaapp",
       sidebarPanel(
         inputPanel(
           radioButtons("artype", "Type:", c("AR", "MA", "ARMA"), "AR", inline = TRUE)
@@ -38,8 +38,9 @@ ui <- fluidPage(
          sliderInput(paste("ma2val"),paste("MA2"), min = 0, max = 0.45, value = 0, step = 0.025),
          sliderInput(paste("ma3val"),paste("MA3"), min = 0, max = 0.45, value = 0, step = 0.025)
         ),
-        actionButton("regenerate", "Re-generate!", icon = icon("sync"), style="color: #fff; background-color: #28a745; border-color: #28a745;")
-      ),
+        actionButton("regenerate", "Re-generate!", icon = icon("sync"), style="color: #fff; background-color: #28a745; border-color: #28a745;"),
+        actionButton("reset", "Reset", icon = icon("undo"), style="color: #fff; background-color: #dc3545; border-color: #dc3545;")
+      )),
       
       # Show a plot of the generated distribution
       mainPanel(
@@ -67,13 +68,18 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-  values <- reactiveValues(arimawarning = FALSE)
+  arimaval <- reactiveVal(list(ar=c(0.5)))
+  update <- reactiveVal(TRUE)
   observe({
+    update(FALSE)
     setSliderU <- function(inputname, inputtype, inputnum) {
       res <- logical(length(opts))
-      terms = (-1)*sapply(1:(inputnum-1), function(i) { input[[paste0(inputtype, i, "val")]]})
+      terms = (-1)*sapply(1:(inputnum-1), function(i) { 
+        input[[paste0(inputtype, i, "val")]] +
+          ifelse((inputnum-1) == i, 0.0001, 0)
+        })
       for (i in 1:length(opts))
-        res[i] <- all(Mod(polyroot(c(1, terms, -opts[i]))) > 1)
+        res[i] <- all(Mod(polyroot(c(1, terms, -opts[i]))) > 1.000001)
       if (all(res == TRUE)) {
         updateSliderInput(session, inputname, min = -0.9, max = 0.9)
         return(TRUE)
@@ -90,17 +96,32 @@ server <- function(input, output, session) {
     shinyjs::toggleState("ar4val", (input$ar3val != 0) && setSliderU("ar4val", "ar", 4))
     shinyjs::toggleState("ma2val", (input$ma1val != 0) && setSliderU("ma2val", "ma", 2))
     shinyjs::toggleState("ma3val", (input$ma2val != 0) && setSliderU("ma3val", "ma", 3))
+    update(TRUE)
+  })
+  
+  observeEvent(input$reset, {
+    update(TRUE)
+    shinyjs::reset("arimaapp")
   })
   
   arsim <- reactive({
     input$regenerate
-    if ((input$ar1val + input$ar2val + input$ar3val + input$ar4val) < 1) {
-      arima.sim(model = list(
-        ar = sapply(1:4, function(i) { input[[paste0("ar", i, "val")]]}),
-        ma = sapply(1:3, function(i) { input[[paste0("ma", i, "val")]]})
-      ),
-      n = 1000)
-    } else {return()}
+    if (update())
+      x = list()
+      if (grepl("AR", input$artype)) {
+        x$ar <- sapply(1:4, function(i) { input[[paste0("ar", i, "val")]]})
+        if (any(x$ar == 0)) {
+          x$ar[which.min(x$ar != 0):4] <- 0
+        }
+      }
+      
+      if (grepl("MA", input$artype)) {
+        x$ma <- sapply(1:3, function(i) { input[[paste0("ma", i, "val")]]})
+        if (any(x$ma == 0)) {
+          x$ma[which.min(x$ma != 0):3] <- 0
+        }
+      }
+      arima.sim(model = x, n = 1000)
   })
   
    output$tsPlot <- renderPlot({
