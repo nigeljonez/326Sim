@@ -57,8 +57,8 @@ ui <- fluidPage(
           tabPanel("About",
             div('Created with',
                 a(href='https://shiny.rstudio.com/', 'Shiny'),
-                'by Nigel Jones,', 
-                a(href='https://github.com/nigeljonez/326Sim', 
+                'by N Jones,', 
+                a(href='https://gitlab.com/snjnz/326sim', 
                   'Open Source on GitHub'),
                 'under the MIT License'))
         )
