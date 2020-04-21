@@ -143,18 +143,16 @@ server <- function(input, output, session) {
    })
    
    output$arimaplots <- renderPlot({
-     if (length(arsim()) == 1000) {
-       par(mfrow=c(3,1))
-       plot.ts(arsim(), main="ARIMA Sim")
-       acf(arsim())
-       pacf(arsim())
-     }
+     req((length(arsim()) == 1000))
+     par(mfrow=c(3,1))
+     plot.ts(arsim(), main="ARIMA Sim")
+     acf(arsim())
+     pacf(arsim())
    })
    
    output$arimacmd <- renderPrint({
-     if (length(arsim()) == 1000) {
-      arima(arsim(), order=c(input$arimaar, 0, input$arimama))
-     }
+     req(length(arsim()) == 1000)
+     arima(arsim(), order=c(input$arimaar, 0, input$arimama))
    })
 }
 
