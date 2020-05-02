@@ -58,7 +58,7 @@ ui <- fluidPage(
             div('Created with',
                 a(href='https://shiny.rstudio.com/', 'Shiny'),
                 'by N Jones,', 
-                a(href='https://gitlab.com/snjnz/326sim', 
+                a(href='https://github.com/snjnz/stats326sim', 
                   'Open Source on GitHub'),
                 'under the MIT License'))
         )
